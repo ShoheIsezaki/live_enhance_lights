@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { LightStage } from "@/components/LightStage";
 import { FollowGate } from "@/components/FollowGate";
 import { createTransport, Transport } from "@/lib/transport";
-import { SHOW_ID } from "@/lib/config";
+import { resolveShowId } from "@/lib/config";
 import { BLACKOUT } from "@/lib/scene";
 import { SceneMessage } from "@/lib/types";
 
@@ -29,8 +29,7 @@ export default function AudiencePage() {
   // 入場後: 同期の購読とスリープ防止
   useEffect(() => {
     if (!entered) return;
-    const showId = getShowId();
-    const t = createTransport(showId, "audience");
+    const t = createTransport(resolveShowId(), "audience");
     transportRef.current = t;
     const off = t.onScene((m) => setMsg(m));
 
@@ -83,12 +82,4 @@ export default function AudiencePage() {
       <LightStage scene={msg.scene} at={msg.at} />
     </div>
   );
-}
-
-function getShowId(): string {
-  if (typeof window !== "undefined") {
-    const q = new URLSearchParams(window.location.search).get("show");
-    if (q) return q;
-  }
-  return SHOW_ID;
 }

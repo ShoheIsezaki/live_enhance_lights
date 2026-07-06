@@ -26,6 +26,12 @@ export interface Transport {
 const channelName = (showId: string) => `show:${showId}`;
 const lastKey = (showId: string) => `lel:last:${showId}`;
 
+// 切り分け用の簡易ログ（ブラウザのコンソールに [LEL] 付きで出力）
+function log(...args: unknown[]) {
+  // eslint-disable-next-line no-console
+  console.log("[LEL]", ...args);
+}
+
 // ---------------------------------------------------------------------------
 // Ably 実装
 // ---------------------------------------------------------------------------
@@ -46,16 +52,23 @@ class AblyTransport implements Transport {
       Math.random().toString(36).slice(2, 10) +
       Date.now().toString(36);
 
+    const name = channelName(showId);
+    log(role, "init: channel =", name, "clientId =", clientId);
+
     this.client = new Ably.Realtime({
       authUrl: "/api/ably/token",
       authParams: { clientId },
       clientId,
     });
 
+    // 接続状態を可視化（切り分け用）
+    this.client.connection.on((s) =>
+      log(role, "connection:", s.current, s.reason?.message ?? "")
+    );
+
     // 後入店の端末が直近のシーンを受け取れるよう rewind(1) を付与。
     // master は params 不要。undefined を渡すと Ably がエラーになるため、
     // オプションが必要なときだけ第2引数を渡す。
-    const name = channelName(showId);
     this.channel =
       role === "audience"
         ? this.client.channels.get(name, { params: { rewind: "1" } })
@@ -65,15 +78,19 @@ class AblyTransport implements Transport {
       // 接続数カウント用に presence へ参加
       try {
         await this.channel.presence.enter({ role });
-      } catch {
-        // presence 失敗は致命的でないため無視
+        log(role, "presence entered");
+      } catch (e) {
+        log(role, "presence enter failed:", (e as Error)?.message);
       }
     }
   }
 
   publishScene(msg: SceneMessage): void {
     this.ready.then(() => {
-      this.channel?.publish("scene", msg);
+      log("master", "publish:", msg.scene.label);
+      this.channel?.publish("scene", msg, (err) => {
+        if (err) log("master", "publish ERROR:", err.message);
+      });
     });
   }
 
@@ -82,9 +99,11 @@ class AblyTransport implements Transport {
     this.ready.then(() => {
       listener = (m: unknown) => {
         const message = m as { data: SceneMessage };
+        log("audience", "received:", message.data?.scene?.label);
         cb(message.data);
       };
       this.channel?.subscribe("scene", listener as never);
+      log("audience", "subscribed to 'scene'");
     });
     return () => {
       if (listener) this.channel?.unsubscribe("scene", listener as never);

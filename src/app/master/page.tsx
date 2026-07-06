@@ -24,7 +24,7 @@ import {
 } from "@/lib/scene";
 import { defaultProgram } from "@/lib/defaultShow";
 import { createTransport, Transport } from "@/lib/transport";
-import { MASTER_PASSCODE, ABLY_ENABLED } from "@/lib/config";
+import { MASTER_PASSCODE, ABLY_ENABLED, resolveShowId } from "@/lib/config";
 import { LightStage } from "@/components/LightStage";
 
 const PROGRAM_KEY = "lel:program";
@@ -74,10 +74,11 @@ export default function MasterPage() {
     }
   }, [program]);
 
-  // 同期トランスポート
+  // 同期トランスポート。チャンネルIDは URL/環境変数から解決し、
+  // localStorage の古いプログラムに依存しない（観客と必ず一致させる）。
   useEffect(() => {
-    if (!ok || !program) return;
-    const t = createTransport(program.showId, "master");
+    if (!ok) return;
+    const t = createTransport(resolveShowId(), "master");
     transportRef.current = t;
     const off = t.onCount((n) => setCount(n));
     return () => {
@@ -85,8 +86,7 @@ export default function MasterPage() {
       t.close();
       transportRef.current = null;
     };
-    // showId が変わったら作り直す
-  }, [ok, program?.showId]);
+  }, [ok]);
 
   const send = useCallback((scene: Scene, btnIndex: number | null) => {
     const msg: SceneMessage = { scene, at: Date.now() };

@@ -3,6 +3,17 @@
 export const SHOW_ID =
   process.env.NEXT_PUBLIC_SHOW_ID?.trim() || "band-live";
 
+// 実際に使う showId を解決する。URL の ?show= を最優先し、無ければ環境変数。
+// master と audience が必ず同じ値を使うようにして、チャンネル不一致を防ぐ
+// （localStorage に保存された古いプログラムの showId には依存しない）。
+export function resolveShowId(): string {
+  if (typeof window !== "undefined") {
+    const q = new URLSearchParams(window.location.search).get("show");
+    if (q) return q;
+  }
+  return SHOW_ID;
+}
+
 export const SHOW_TITLE =
   process.env.NEXT_PUBLIC_SHOW_TITLE?.trim() || "LIVE ENHANCE LIGHTS";
 
