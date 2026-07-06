@@ -12,11 +12,18 @@ import { ABLY_ENABLED } from "./config";
 
 export type Role = "audience" | "master";
 
+// マスターから観客への制御コマンド
+export type ControlCmd = "reset"; // 観客を初期画面（フォローゲート）に戻す
+
 export interface Transport {
   // マスターがシーンを配信
   publishScene(msg: SceneMessage): void;
   // シーン受信の購読（解除関数を返す）
   onScene(cb: (msg: SceneMessage) => void): () => void;
+  // マスターが制御コマンドを配信（観客リセット等）
+  publishControl(cmd: ControlCmd): void;
+  // 制御コマンドの購読（解除関数を返す）。観客側で使用。
+  onControl(cb: (cmd: ControlCmd) => void): () => void;
   // 接続数の購読（解除関数を返す）。マスターのみ使用。
   onCount(cb: (n: number) => void): () => void;
   // 後入店の端末が現在のシーンへ追従できたか（Ablyはrewindで自動、Localはstorage）
@@ -38,6 +45,7 @@ function log(...args: unknown[]) {
 class AblyTransport implements Transport {
   private client: import("ably").Realtime | null = null;
   private channel: import("ably").RealtimeChannel | null = null;
+  private ctrl: import("ably").RealtimeChannel | null = null;
   private ready: Promise<void>;
 
   constructor(showId: string, role: Role) {
@@ -74,6 +82,9 @@ class AblyTransport implements Transport {
         ? this.client.channels.get(name, { params: { rewind: "1" } })
         : this.client.channels.get(name);
 
+    // 制御用は別チャンネル（rewind なし＝後入店に古いリセットを再送しない）
+    this.ctrl = this.client.channels.get(name + ":ctrl");
+
     if (role === "audience") {
       // 接続数カウント用に presence へ参加
       try {
@@ -88,10 +99,35 @@ class AblyTransport implements Transport {
   publishScene(msg: SceneMessage): void {
     this.ready.then(() => {
       log("master", "publish:", msg.scene.label);
-      this.channel?.publish("scene", msg, (err) => {
-        if (err) log("master", "publish ERROR:", err.message);
-      });
+      // Ably v2 は Promise 方式（コールバック引数は廃止）
+      this.channel
+        ?.publish("scene", msg)
+        .catch((err) => log("master", "publish ERROR:", err?.message));
     });
+  }
+
+  publishControl(cmd: ControlCmd): void {
+    this.ready.then(() => {
+      log("master", "control:", cmd);
+      this.ctrl
+        ?.publish("control", { cmd })
+        .catch((err) => log("master", "control ERROR:", err?.message));
+    });
+  }
+
+  onControl(cb: (cmd: ControlCmd) => void): () => void {
+    let listener: ((m: unknown) => void) | null = null;
+    this.ready.then(() => {
+      listener = (m: unknown) => {
+        const message = m as { data: { cmd: ControlCmd } };
+        log("audience", "control received:", message.data?.cmd);
+        cb(message.data.cmd);
+      };
+      this.ctrl?.subscribe("control", listener as never);
+    });
+    return () => {
+      if (listener) this.ctrl?.unsubscribe("control", listener as never);
+    };
   }
 
   onScene(cb: (msg: SceneMessage) => void): () => void {
@@ -193,6 +229,18 @@ class LocalTransport implements Transport {
         /* ignore */
       }
     }
+    return () => this.bc.removeEventListener("message", handler);
+  }
+
+  publishControl(cmd: ControlCmd): void {
+    this.bc.postMessage({ type: "control", cmd });
+  }
+
+  onControl(cb: (cmd: ControlCmd) => void): () => void {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "control") cb(e.data.cmd as ControlCmd);
+    };
+    this.bc.addEventListener("message", handler);
     return () => this.bc.removeEventListener("message", handler);
   }
 

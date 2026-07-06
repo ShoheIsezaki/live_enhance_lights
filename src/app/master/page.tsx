@@ -95,6 +95,14 @@ export default function MasterPage() {
     setActiveBtn(btnIndex);
   }, []);
 
+  const resetAudience = useCallback(() => {
+    if (!confirm("観客の画面を全員、初期画面（フォロー画面）に戻します。よろしいですか？"))
+      return;
+    transportRef.current?.publishControl("reset");
+    setActiveBtn(null);
+    setCurrent(null);
+  }, []);
+
   const submitPass = (e: React.FormEvent) => {
     e.preventDefault();
     if (pass === MASTER_PASSCODE) {
@@ -165,6 +173,7 @@ export default function MasterPage() {
           activeBtn={activeBtn}
           current={current}
           onPress={send}
+          onReset={resetAudience}
         />
       ) : (
         <EditPanel
@@ -296,11 +305,13 @@ function LivePanel({
   activeBtn,
   current,
   onPress,
+  onReset,
 }: {
   song: Song;
   activeBtn: number | null;
   current: SceneMessage | null;
   onPress: (scene: Scene, i: number | null) => void;
+  onReset: () => void;
 }) {
   return (
     <div className="live">
@@ -335,6 +346,9 @@ function LivePanel({
           }
         >
           ■ 暗転（全消灯）
+        </button>
+        <button className="resetAudience" onClick={onReset}>
+          ⟲ 観客を初期画面に戻す
         </button>
         <div className="preview">
           <div className="preview__label">現在の出力</div>
