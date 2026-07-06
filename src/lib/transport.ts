@@ -52,9 +52,14 @@ class AblyTransport implements Transport {
       clientId,
     });
 
-    // 後入店の端末が直近のシーンを受け取れるよう rewind(1) を付与
-    const params = role === "audience" ? { rewind: "1" } : undefined;
-    this.channel = this.client.channels.get(channelName(showId), { params });
+    // 後入店の端末が直近のシーンを受け取れるよう rewind(1) を付与。
+    // master は params 不要。undefined を渡すと Ably がエラーになるため、
+    // オプションが必要なときだけ第2引数を渡す。
+    const name = channelName(showId);
+    this.channel =
+      role === "audience"
+        ? this.client.channels.get(name, { params: { rewind: "1" } })
+        : this.client.channels.get(name);
 
     if (role === "audience") {
       // 接続数カウント用に presence へ参加
