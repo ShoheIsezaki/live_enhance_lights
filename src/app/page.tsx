@@ -33,19 +33,6 @@ export default function AudiencePage() {
     transportRef.current = t;
     const off = t.onScene((m) => setMsg(m));
 
-    // マスターからのリセット指示で初期画面（フォローゲート）へ戻す
-    const offCtrl = t.onControl((cmd) => {
-      if (cmd === "reset") {
-        try {
-          localStorage.removeItem(ENTERED_KEY);
-        } catch {
-          /* ignore */
-        }
-        setMsg({ scene: BLACKOUT, at: Date.now() });
-        setEntered(false);
-      }
-    });
-
     // 画面スリープ防止（対応端末のみ）
     const requestWakeLock = async () => {
       try {
@@ -63,7 +50,6 @@ export default function AudiencePage() {
 
     return () => {
       off();
-      offCtrl();
       document.removeEventListener("visibilitychange", onVisible);
       wakeLockRef.current?.release().catch(() => {});
       t.close();

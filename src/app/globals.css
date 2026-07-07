@@ -341,15 +341,6 @@ button {
   font-weight: 800;
   font-size: 16px;
 }
-.resetAudience {
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid #5a2a2a;
-  background: #2a1515;
-  color: #ff9a8a;
-  font-weight: 700;
-  font-size: 15px;
-}
 .preview {
   background: var(--panel);
   border: 1px solid var(--line);
