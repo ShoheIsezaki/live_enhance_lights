@@ -2,8 +2,39 @@
 // サーバからはシーン定義を1回送るだけ。明滅などの毎フレーム描画は各端末が自前で行う
 // ことで、Ably のメッセージ量（＝従量課金）を最小に抑える。
 
-import { Scene } from "./types";
+import { Scene, FontKey, SizeKey } from "./types";
 import { MAX_STROBE_HZ } from "./config";
+
+// テキスト用のシステムフォント（webフォント配信なし＝通信量ゼロ・全端末で即表示）
+export const FONT_STACKS: Record<FontKey, string> = {
+  gothic:
+    '"Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif',
+  mincho: '"Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif',
+  maru: '"Hiragino Maru Gothic ProN", "Rounded Mplus 1c", "Yu Gothic", sans-serif',
+  mono: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
+};
+
+export const FONT_LABELS: Record<FontKey, string> = {
+  gothic: "ゴシック",
+  mincho: "明朝",
+  maru: "丸ゴシック",
+  mono: "等幅",
+};
+
+// サイズはコンテナ幅基準(cqw)。全画面でもプレビュー枠でも同じ見え方になる。
+export const TEXT_SIZES: Record<SizeKey, string> = {
+  s: "8cqw",
+  m: "14cqw",
+  l: "22cqw",
+  xl: "32cqw",
+};
+
+export const SIZE_LABELS: Record<SizeKey, string> = {
+  s: "小",
+  m: "中",
+  l: "大",
+  xl: "特大",
+};
 
 // BPM を1拍あたりのミリ秒に変換
 export function bpmToMs(bpm: number): number {
@@ -35,6 +66,9 @@ export function makeDefaultScene(label = "新規シーン"): Scene {
     bpm: 120,
     repeat: true,
     text: "",
+    font: "gothic",
+    size: "l",
+    imageFit: "contain",
   };
 }
 
@@ -53,6 +87,11 @@ export function usesText(pattern: Scene["pattern"]): boolean {
   return pattern === "text";
 }
 
+// このシーンで画像が意味を持つか
+export function usesImage(pattern: Scene["pattern"]): boolean {
+  return pattern === "image";
+}
+
 // パターンの日本語ラベル（編集UI用）
 export const PATTERN_LABELS: Record<Scene["pattern"], string> = {
   solid: "単色",
@@ -61,5 +100,6 @@ export const PATTERN_LABELS: Record<Scene["pattern"], string> = {
   gradient: "グラデーション",
   rainbow: "レインボー",
   text: "テキスト",
+  image: "画像",
   blackout: "暗転",
 };

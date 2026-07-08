@@ -14,17 +14,29 @@ import {
   ShowProgram,
   Song,
   SceneMessage,
+  FontKey,
+  SizeKey,
+  ImageFit,
 } from "@/lib/types";
 import {
   PATTERN_LABELS,
+  FONT_LABELS,
+  SIZE_LABELS,
   makeDefaultScene,
   usesBpm,
   usesColor2,
   usesText,
+  usesImage,
 } from "@/lib/scene";
 import { defaultProgram } from "@/lib/defaultShow";
 import { createTransport, Transport } from "@/lib/transport";
-import { MASTER_PASSCODE, ABLY_ENABLED, resolveShowId } from "@/lib/config";
+import {
+  MASTER_PASSCODE,
+  ABLY_ENABLED,
+  UPLOAD_ENABLED,
+  resolveShowId,
+} from "@/lib/config";
+import { uploadImage } from "@/lib/upload";
 import { LightStage } from "@/components/LightStage";
 
 const PROGRAM_KEY = "lel:program";
@@ -467,7 +479,9 @@ function SceneEditor({
         </select>
       </div>
 
-      {scene.pattern !== "blackout" && scene.pattern !== "rainbow" ? (
+      {scene.pattern !== "blackout" &&
+      scene.pattern !== "rainbow" &&
+      scene.pattern !== "image" ? (
         <div className="editor__row">
           <label>{usesColor2(scene.pattern) ? "色1" : "色"}</label>
           <input
@@ -518,14 +532,49 @@ function SceneEditor({
       ) : null}
 
       {usesText(scene.pattern) ? (
-        <div className="editor__row">
-          <label>表示文字</label>
-          <input
-            value={scene.text ?? ""}
-            onChange={(e) => up({ text: e.target.value })}
-            maxLength={12}
-          />
-        </div>
+        <>
+          <div className="editor__row editor__row--top">
+            <label>表示文字</label>
+            <textarea
+              className="editor__textarea"
+              value={scene.text ?? ""}
+              onChange={(e) => up({ text: e.target.value })}
+              rows={3}
+              maxLength={60}
+              placeholder="改行できます"
+            />
+          </div>
+          <div className="editor__row">
+            <label>フォント</label>
+            <select
+              value={scene.font ?? "gothic"}
+              onChange={(e) => up({ font: e.target.value as FontKey })}
+            >
+              {(Object.keys(FONT_LABELS) as FontKey[]).map((f) => (
+                <option key={f} value={f}>
+                  {FONT_LABELS[f]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="editor__row">
+            <label>サイズ</label>
+            <select
+              value={scene.size ?? "l"}
+              onChange={(e) => up({ size: e.target.value as SizeKey })}
+            >
+              {(Object.keys(SIZE_LABELS) as SizeKey[]).map((s) => (
+                <option key={s} value={s}>
+                  {SIZE_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      ) : null}
+
+      {usesImage(scene.pattern) ? (
+        <ImageControls scene={scene} up={up} />
       ) : null}
 
       <div className="editor__preview">
@@ -536,6 +585,82 @@ function SceneEditor({
         このボタンを空にする
       </button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+function ImageControls({
+  scene,
+  up,
+}: {
+  scene: Scene;
+  up: (patch: Partial<Scene>) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string>("");
+
+  const onFile = async (file: File) => {
+    setErr("");
+    setBusy(true);
+    try {
+      const url = await uploadImage(file);
+      up({ imageUrl: url });
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      {UPLOAD_ENABLED ? (
+        <div className="editor__row">
+          <label>画像</label>
+          <button
+            className="editor__upload"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+          >
+            {busy ? "アップロード中…" : "画像をアップロード"}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onFile(f);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      ) : null}
+
+      <div className="editor__row editor__row--top">
+        <label>画像URL</label>
+        <input
+          value={scene.imageUrl ?? ""}
+          onChange={(e) => up({ imageUrl: e.target.value })}
+          placeholder="https://…（R2などの公開URL）"
+        />
+      </div>
+
+      <div className="editor__row">
+        <label>表示</label>
+        <select
+          value={scene.imageFit ?? "contain"}
+          onChange={(e) => up({ imageFit: e.target.value as ImageFit })}
+        >
+          <option value="contain">全体表示（余白あり）</option>
+          <option value="cover">画面いっぱい（トリミング）</option>
+        </select>
+      </div>
+
+      {err ? <div className="editor__err">{err}</div> : null}
+    </>
   );
 }
 
@@ -659,6 +784,18 @@ function cellStyle(scene: Scene): React.CSSProperties {
       background:
         "linear-gradient(90deg, red, orange, yellow, green, blue, violet)",
     };
+  }
+  if (scene.pattern === "image") {
+    return scene.imageUrl
+      ? {
+          background: `#111 center/cover no-repeat url(${JSON.stringify(
+            scene.imageUrl
+          )})`,
+        }
+      : { background: "#111", borderColor: "#333" };
+  }
+  if (scene.pattern === "text") {
+    return { background: "#111", borderColor: "#333" };
   }
   return { background: scene.color };
 }

@@ -8,7 +8,15 @@ export type ScenePattern =
   | "gradient" // 2色グラデーション（ゆっくり移動）
   | "rainbow" // 虹色に色相回転
   | "text" // 背景色＋大きな文字（コール用）
+  | "image" // 画像を全画面表示
   | "blackout"; // 暗転（真っ黒）
+
+// テキストのフォント種別（システムフォントのみ＝通信量ゼロ）
+export type FontKey = "gothic" | "mincho" | "maru" | "mono";
+// テキストのサイズプリセット
+export type SizeKey = "s" | "m" | "l" | "xl";
+// 画像のフィット方法
+export type ImageFit = "contain" | "cover";
 
 export interface Scene {
   // 表示用のボタン名（コントローラの視認性のため）
@@ -22,8 +30,14 @@ export interface Scene {
   bpm?: number;
   // アニメーションを繰り返すか（false のとき pulse/strobe は1回のみ）
   repeat?: boolean;
-  // text パターンの表示文字
+  // text パターンの表示文字（改行可）
   text?: string;
+  // text パターンのフォント・サイズ
+  font?: FontKey;
+  size?: SizeKey;
+  // image パターンの画像URL（Cloudflare R2 等のCDN配信URL）と表示方法
+  imageUrl?: string;
+  imageFit?: ImageFit;
 }
 
 // 1曲ぶんの演出。ボタンは 4×3 = 12 個（空きスロットは null）

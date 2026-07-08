@@ -43,6 +43,8 @@ button {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  /* テキストサイズを cqw で指定するためのコンテナ。全画面でもプレビュー枠でも同じ見え方に */
+  container-type: size;
 }
 .stage__bg {
   position: absolute;
@@ -66,10 +68,20 @@ button {
   justify-content: center;
   text-align: center;
   font-weight: 900;
-  font-size: clamp(48px, 18vw, 220px);
+  font-size: 12vmin; /* フォールバック（cqw 非対応時）。通常は inline の cqw が優先 */
+  line-height: 1.15;
+  white-space: pre-wrap; /* 改行を保持 */
+  word-break: break-word;
   letter-spacing: 0.04em;
   text-shadow: 0 0 24px rgba(255, 255, 255, 0.4);
-  padding: 0 4vw;
+  padding: 0 4cqw;
+}
+.stage__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* object-fit は scene.imageFit を inline で指定 */
 }
 
 @keyframes lelGradient {
@@ -354,11 +366,14 @@ button {
 }
 .preview__stage {
   position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 10px;
+  height: 340px;
+  aspect-ratio: 9 / 19.5; /* スマホ縦長を想定 */
+  margin: 0 auto;
+  border-radius: 20px;
   overflow: hidden;
   background: #000;
+  border: 3px solid #000;
+  box-shadow: 0 0 0 2px var(--line);
 }
 .preview__idle {
   position: absolute;
@@ -425,11 +440,43 @@ button {
   align-items: center;
   gap: 10px;
 }
+.editor__row--top {
+  align-items: flex-start;
+}
 .editor__row > label {
   width: 84px;
   flex: 0 0 84px;
   font-size: 13px;
   color: var(--muted);
+}
+.editor__textarea {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 64px;
+}
+.editor__upload {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--text);
+  font-weight: 600;
+}
+.editor__upload:disabled {
+  opacity: 0.6;
+}
+.editor__err {
+  font-size: 12px;
+  color: var(--danger);
+  line-height: 1.5;
 }
 .editor__row input[type="text"],
 .editor__row input:not([type]),
@@ -461,11 +508,14 @@ button {
 }
 .editor__preview {
   position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 10px;
+  height: 320px;
+  aspect-ratio: 9 / 19.5; /* スマホ縦長を想定 */
+  margin: 0 auto;
+  border-radius: 20px;
   overflow: hidden;
   background: #000;
+  border: 3px solid #000;
+  box-shadow: 0 0 0 2px var(--line);
 }
 .editor__clear {
   padding: 10px;

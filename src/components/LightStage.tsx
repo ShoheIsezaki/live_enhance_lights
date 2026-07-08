@@ -5,7 +5,7 @@
 
 import { useEffect, useRef } from "react";
 import { Scene } from "@/lib/types";
-import { bpmToMs, strobePeriodMs } from "@/lib/scene";
+import { bpmToMs, strobePeriodMs, FONT_STACKS, TEXT_SIZES } from "@/lib/scene";
 
 interface Props {
   scene: Scene;
@@ -36,7 +36,7 @@ export function LightStage({ scene, at, fill }: Props) {
       bg.style.backgroundColor = scene.color;
     } else if (p === "blackout") {
       bg.style.backgroundColor = "#000000";
-    } else if (p === "text") {
+    } else if (p === "text" || p === "image") {
       bg.style.backgroundColor = "#000000";
     } else if (p === "gradient") {
       bg.style.background = `linear-gradient(120deg, ${scene.color}, ${
@@ -88,9 +88,25 @@ export function LightStage({ scene, at, fill }: Props) {
       <div ref={bgRef} className="stage__bg" />
       <div ref={ovRef} className="stage__overlay" />
       {scene.pattern === "text" && scene.text ? (
-        <div className="stage__text" style={{ color: scene.color }}>
+        <div
+          className="stage__text"
+          style={{
+            color: scene.color,
+            fontFamily: FONT_STACKS[scene.font ?? "gothic"],
+            fontSize: TEXT_SIZES[scene.size ?? "l"],
+          }}
+        >
           {scene.text}
         </div>
+      ) : null}
+      {scene.pattern === "image" && scene.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="stage__img"
+          src={scene.imageUrl}
+          alt=""
+          style={{ objectFit: scene.imageFit ?? "contain" }}
+        />
       ) : null}
     </div>
   );

@@ -30,5 +30,10 @@ export const MASTER_PASSCODE =
 export const ABLY_ENABLED =
   process.env.NEXT_PUBLIC_ABLY_ENABLED?.trim() === "1";
 
+// 画像アップロード（Cloudflare R2）を有効にするか。編集画面のアップロードボタン表示に使用。
+// 実際のR2認証情報はサーバ側の環境変数（R2_*）に置き、/api/upload-url でのみ使用する。
+export const UPLOAD_ENABLED =
+  process.env.NEXT_PUBLIC_UPLOAD_ENABLED?.trim() === "1";
+
 // 安全上のストロボ点滅の上限周波数（Hz）。光過敏性発作への配慮で 3Hz を超えさせない。
 export const MAX_STROBE_HZ = 3;
