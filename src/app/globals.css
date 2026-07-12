@@ -389,6 +389,72 @@ button {
   text-align: center;
 }
 
+/* MIDIパネル */
+.midi {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.midi__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.midi__title {
+  font-weight: 700;
+}
+.midi__on {
+  color: #30d158;
+  font-size: 13px;
+  font-weight: 700;
+}
+.midi__enable {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.midi__enable:disabled {
+  opacity: 0.5;
+}
+.midi__note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.midi__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.midi__row > label {
+  font-size: 13px;
+  color: var(--muted);
+}
+.midi__row input {
+  width: 84px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--text);
+}
+.midi__status {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel2);
+  border-radius: 8px;
+  padding: 8px;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
 /* 参加用QR */
 .join {
   background: var(--panel);

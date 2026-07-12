@@ -28,6 +28,7 @@ export function LightStage({ scene, at, fill }: Props) {
     bg.style.backgroundColor = "";
     bg.style.backgroundSize = "";
     ov.style.opacity = "0";
+    ov.style.backgroundColor = "#000000";
 
     let raf = 0;
     const p = scene.pattern;
@@ -36,8 +37,11 @@ export function LightStage({ scene, at, fill }: Props) {
       bg.style.backgroundColor = scene.color;
     } else if (p === "blackout") {
       bg.style.backgroundColor = "#000000";
-    } else if (p === "text" || p === "image") {
+    } else if (p === "text") {
       bg.style.backgroundColor = "#000000";
+    } else if (p === "image") {
+      // 画像の余白（contain時）の背景色。未指定は黒
+      bg.style.backgroundColor = scene.bg || "#000000";
     } else if (p === "gradient") {
       bg.style.background = `linear-gradient(120deg, ${scene.color}, ${
         scene.color2 || scene.color
@@ -49,6 +53,12 @@ export function LightStage({ scene, at, fill }: Props) {
         p === "strobe"
           ? strobePeriodMs(scene.bpm || 120)
           : bpmToMs(scene.bpm || 120);
+      // 明滅/ストロボは 色1(bg) ↔ 色2(overlay) の2色切替。色2未指定は黒。
+      const c2 = scene.color2 || "#000000";
+      if (p !== "rainbow") {
+        bg.style.backgroundColor = scene.color;
+        ov.style.backgroundColor = c2;
+      }
 
       const frame = () => {
         const t = Date.now() - at;
@@ -56,18 +66,16 @@ export function LightStage({ scene, at, fill }: Props) {
           const hue = (t / 20) % 360;
           bg.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
         } else if (p === "pulse") {
-          bg.style.backgroundColor = scene.color;
           if (scene.repeat === false && t > period) {
-            ov.style.opacity = "0"; // 1回鳴らして点灯保持
+            ov.style.opacity = "0"; // 1回鳴らして色1で点灯保持
           } else {
-            // 暗→明→暗 を滑らかに繰り返す（下限 20% 程度）
-            const level = 0.6 + 0.4 * Math.sin((t / period) * 2 * Math.PI - Math.PI / 2);
-            ov.style.opacity = String(1 - level);
+            // 色1↔色2 を滑らかにクロスフェード（0↔1）
+            const x = (1 - Math.cos((t / period) * 2 * Math.PI)) / 2;
+            ov.style.opacity = String(x);
           }
         } else if (p === "strobe") {
-          bg.style.backgroundColor = scene.color;
           if (scene.repeat === false && t > period) {
-            ov.style.opacity = "0"; // 1回点滅して点灯保持
+            ov.style.opacity = "0"; // 1回点滅して色1で点灯保持
           } else {
             const cycle = (t % period) / period;
             ov.style.opacity = cycle < 0.5 ? "0" : "1";

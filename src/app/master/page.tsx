@@ -37,10 +37,12 @@ import {
   resolveShowId,
 } from "@/lib/config";
 import { uploadImage } from "@/lib/upload";
+import { useMidi } from "@/lib/midi";
 import { LightStage } from "@/components/LightStage";
 
 const PROGRAM_KEY = "lel:program";
 const OK_KEY = "lel:master-ok";
+const BASECC_KEY = "lel:midi-basecc";
 
 type Mode = "live" | "edit";
 
@@ -106,6 +108,56 @@ export default function MasterPage() {
     setCurrent(msg);
     setActiveBtn(btnIndex);
   }, []);
+
+  // --- MIDI（PC=曲切替 / CC=シーン発火） ---
+  const [baseCC, setBaseCC] = useState(0);
+  const programRef = useRef(program);
+  const songIdxRef = useRef(songIdx);
+  const baseCCRef = useRef(baseCC);
+  const ccStateRef = useRef<Map<number, number>>(new Map());
+  useEffect(() => {
+    programRef.current = program;
+  }, [program]);
+  useEffect(() => {
+    songIdxRef.current = songIdx;
+  }, [songIdx]);
+  useEffect(() => {
+    baseCCRef.current = baseCC;
+    try {
+      localStorage.setItem(BASECC_KEY, String(baseCC));
+    } catch {
+      /* ignore */
+    }
+  }, [baseCC]);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(BASECC_KEY);
+      if (v != null) setBaseCC(Number(v) || 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const midi = useMidi({
+    onProgram: (pc) => {
+      const songs = programRef.current?.songs ?? [];
+      if (pc >= 0 && pc < songs.length) {
+        setSongIdx(pc);
+        setEditIdx(null);
+      }
+    },
+    onControl: (cc, val) => {
+      const btn = cc - baseCCRef.current;
+      const prev = ccStateRef.current.get(cc) ?? 0;
+      ccStateRef.current.set(cc, val);
+      // 立ち上がり（<64 → ≥64）でのみ発火し、二重発火を防ぐ
+      if (btn >= 0 && btn < BUTTONS_PER_SONG && val >= 64 && prev < 64) {
+        const song = programRef.current?.songs[songIdxRef.current];
+        const scene = song?.buttons[btn];
+        if (scene) send(scene, btn);
+      }
+    },
+  });
 
   const submitPass = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +229,9 @@ export default function MasterPage() {
           activeBtn={activeBtn}
           current={current}
           onPress={send}
+          midi={midi}
+          baseCC={baseCC}
+          setBaseCC={setBaseCC}
         />
       ) : (
         <EditPanel
@@ -303,16 +358,24 @@ function SongTabs({
 }
 
 // ---------------------------------------------------------------------------
+type MidiState = ReturnType<typeof useMidi>;
+
 function LivePanel({
   song,
   activeBtn,
   current,
   onPress,
+  midi,
+  baseCC,
+  setBaseCC,
 }: {
   song: Song;
   activeBtn: number | null;
   current: SceneMessage | null;
   onPress: (scene: Scene, i: number | null) => void;
+  midi: MidiState;
+  baseCC: number;
+  setBaseCC: (n: number) => void;
 }) {
   return (
     <div className="live">
@@ -361,8 +424,71 @@ function LivePanel({
             {current ? current.scene.label : "—"}
           </div>
         </div>
+        <MidiPanel midi={midi} baseCC={baseCC} setBaseCC={setBaseCC} />
         <JoinPanel />
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+function MidiPanel({
+  midi,
+  baseCC,
+  setBaseCC,
+}: {
+  midi: MidiState;
+  baseCC: number;
+  setBaseCC: (n: number) => void;
+}) {
+  return (
+    <div className="midi">
+      <div className="midi__head">
+        <span className="midi__title">MIDI操作</span>
+        {midi.enabled ? (
+          <span className="midi__on">● 有効</span>
+        ) : (
+          <button
+            className="midi__enable"
+            onClick={midi.enable}
+            disabled={!midi.supported}
+          >
+            接続する
+          </button>
+        )}
+      </div>
+
+      {!midi.supported ? (
+        <div className="midi__note">
+          このブラウザは Web MIDI 非対応です（Chrome / Edge を使ってください）。
+        </div>
+      ) : (
+        <>
+          <div className="midi__note">
+            PC＝曲の切替 / CC＝シーン発火。CC {baseCC}〜{baseCC + 11} が
+            ボタン1〜12に対応します。
+          </div>
+          <div className="midi__row">
+            <label>開始CC番号</label>
+            <input
+              type="number"
+              min={0}
+              max={116}
+              value={baseCC}
+              onChange={(e) =>
+                setBaseCC(Math.max(0, Math.min(116, Number(e.target.value) || 0)))
+              }
+            />
+          </div>
+          {midi.enabled ? (
+            <div className="midi__status">
+              <div>入力: {midi.inputs.length ? midi.inputs.join(", ") : "（待機中）"}</div>
+              <div>受信: {midi.last || "—"}</div>
+            </div>
+          ) : null}
+          {midi.error ? <div className="editor__err">{midi.error}</div> : null}
+        </>
+      )}
     </div>
   );
 }
@@ -657,6 +783,16 @@ function ImageControls({
           <option value="contain">全体表示（余白あり）</option>
           <option value="cover">画面いっぱい（トリミング）</option>
         </select>
+      </div>
+
+      <div className="editor__row">
+        <label>背景色</label>
+        <input
+          type="color"
+          value={scene.bg ?? "#000000"}
+          onChange={(e) => up({ bg: e.target.value })}
+        />
+        <span className="editor__hint2">全体表示のときの余白の色</span>
       </div>
 
       {err ? <div className="editor__err">{err}</div> : null}

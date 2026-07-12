@@ -69,6 +69,7 @@ export function makeDefaultScene(label = "新規シーン"): Scene {
     font: "gothic",
     size: "l",
     imageFit: "contain",
+    bg: "#000000",
   };
 }
 
@@ -77,9 +78,9 @@ export function usesBpm(pattern: Scene["pattern"]): boolean {
   return pattern === "pulse" || pattern === "strobe";
 }
 
-// このシーンで2色目が意味を持つか
+// このシーンで2色目が意味を持つか（グラデ＝2色、明滅/ストロボ＝色1↔色2の切替）
 export function usesColor2(pattern: Scene["pattern"]): boolean {
-  return pattern === "gradient";
+  return pattern === "gradient" || pattern === "pulse" || pattern === "strobe";
 }
 
 // このシーンでテキストが意味を持つか

@@ -22,9 +22,9 @@ export interface Scene {
   // 表示用のボタン名（コントローラの視認性のため）
   label: string;
   pattern: ScenePattern;
-  // メインカラー（solid/pulse/strobe/text の発光色、gradient の1色目）
+  // メインカラー（solid/text の発光色、pulse/strobe/gradient の1色目）
   color: string;
-  // 2色目（gradient 用）
+  // 2色目（gradient / pulse / strobe で使用）
   color2?: string;
   // pulse / strobe のテンポ
   bpm?: number;
@@ -38,6 +38,8 @@ export interface Scene {
   // image パターンの画像URL（Cloudflare R2 等のCDN配信URL）と表示方法
   imageUrl?: string;
   imageFit?: ImageFit;
+  // image パターンの背景色（contain時の余白の色）
+  bg?: string;
 }
 
 // 1曲ぶんの演出。ボタンは 4×3 = 12 個（空きスロットは null）
