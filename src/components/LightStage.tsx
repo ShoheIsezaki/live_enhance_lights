@@ -37,8 +37,6 @@ export function LightStage({ scene, at, fill }: Props) {
       bg.style.backgroundColor = scene.color;
     } else if (p === "blackout") {
       bg.style.backgroundColor = "#000000";
-    } else if (p === "text") {
-      bg.style.backgroundColor = "#000000";
     } else if (p === "image") {
       // 画像の余白（contain時）の背景色。未指定は黒
       bg.style.backgroundColor = scene.bg || "#000000";
@@ -95,18 +93,6 @@ export function LightStage({ scene, at, fill }: Props) {
     <div className={fill ? "stage stage--fill" : "stage"}>
       <div ref={bgRef} className="stage__bg" />
       <div ref={ovRef} className="stage__overlay" />
-      {scene.pattern === "text" && scene.text ? (
-        <div
-          className="stage__text"
-          style={{
-            color: scene.color,
-            fontFamily: FONT_STACKS[scene.font ?? "gothic"],
-            fontSize: TEXT_SIZES[scene.size ?? "l"],
-          }}
-        >
-          {scene.text}
-        </div>
-      ) : null}
       {scene.pattern === "image" && scene.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -115,6 +101,18 @@ export function LightStage({ scene, at, fill }: Props) {
           alt=""
           style={{ objectFit: scene.imageFit ?? "contain" }}
         />
+      ) : null}
+      {scene.pattern !== "blackout" && scene.text ? (
+        // オーバーレイ文字。背景がどう動いても文字は白＋黒縁取りで固定表示
+        <div
+          className="stage__text"
+          style={{
+            fontFamily: FONT_STACKS[scene.font ?? "gothic"],
+            fontSize: TEXT_SIZES[scene.size ?? "l"],
+          }}
+        >
+          {scene.text}
+        </div>
       ) : null}
     </div>
   );

@@ -7,7 +7,6 @@ export type ScenePattern =
   | "strobe" // BPMに合わせてオン/オフ点滅（安全上 3Hz 上限にクランプ）
   | "gradient" // 2色グラデーション（ゆっくり移動）
   | "rainbow" // 虹色に色相回転
-  | "text" // 背景色＋大きな文字（コール用）
   | "image" // 画像を全画面表示
   | "blackout"; // 暗転（真っ黒）
 
@@ -22,7 +21,7 @@ export interface Scene {
   // 表示用のボタン名（コントローラの視認性のため）
   label: string;
   pattern: ScenePattern;
-  // メインカラー（solid/text の発光色、pulse/strobe/gradient の1色目）
+  // メインカラー（solid の発光色、pulse/strobe/gradient の1色目）
   color: string;
   // 2色目（gradient / pulse / strobe で使用）
   color2?: string;
@@ -30,9 +29,10 @@ export interface Scene {
   bpm?: number;
   // アニメーションを繰り返すか（false のとき pulse/strobe は1回のみ）
   repeat?: boolean;
-  // text パターンの表示文字（改行可）
+  // どのパターンにも重ねられるオーバーレイ文字（改行可・空なら非表示）
+  // 文字は常に白＋黒縁取りの固定スタイル（色や明るさの変化はしない）
   text?: string;
-  // text パターンのフォント・サイズ
+  // オーバーレイ文字のフォント・サイズ
   font?: FontKey;
   size?: SizeKey;
   // image パターンの画像URL（Cloudflare R2 等のCDN配信URL）と表示方法

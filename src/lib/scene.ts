@@ -2,7 +2,7 @@
 // サーバからはシーン定義を1回送るだけ。明滅などの毎フレーム描画は各端末が自前で行う
 // ことで、Ably のメッセージ量（＝従量課金）を最小に抑える。
 
-import { Scene, FontKey, SizeKey } from "./types";
+import { Scene, FontKey, SizeKey, ShowProgram } from "./types";
 import { MAX_STROBE_HZ } from "./config";
 
 // テキスト用のシステムフォント（webフォント配信なし＝通信量ゼロ・全端末で即表示）
@@ -83,9 +83,9 @@ export function usesColor2(pattern: Scene["pattern"]): boolean {
   return pattern === "gradient" || pattern === "pulse" || pattern === "strobe";
 }
 
-// このシーンでテキストが意味を持つか
+// このシーンでオーバーレイ文字が意味を持つか（暗転以外はどのパターンにも重ねられる）
 export function usesText(pattern: Scene["pattern"]): boolean {
-  return pattern === "text";
+  return pattern !== "blackout";
 }
 
 // このシーンで画像が意味を持つか
@@ -100,7 +100,25 @@ export const PATTERN_LABELS: Record<Scene["pattern"], string> = {
   strobe: "ストロボ(BPM)",
   gradient: "グラデーション",
   rainbow: "レインボー",
-  text: "テキスト",
   image: "画像",
   blackout: "暗転",
 };
+
+// 旧データ移行：かつての「テキスト」パターン（黒背景＋文字）は
+// 「単色（黒）＋オーバーレイ文字」として読み替える。
+export function migrateScene(scene: Scene): Scene {
+  if ((scene.pattern as string) === "text") {
+    return { ...scene, pattern: "solid", color: "#000000" };
+  }
+  return scene;
+}
+
+export function migrateProgram(p: ShowProgram): ShowProgram {
+  return {
+    ...p,
+    songs: p.songs.map((s) => ({
+      ...s,
+      buttons: s.buttons.map((b) => (b ? migrateScene(b) : null)),
+    })),
+  };
+}

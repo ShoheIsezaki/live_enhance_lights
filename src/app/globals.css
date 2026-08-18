@@ -73,8 +73,12 @@ button {
   white-space: pre-wrap; /* 改行を保持 */
   word-break: break-word;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 24px rgba(255, 255, 255, 0.4);
+  /* 文字は常に白＋黒縁取りの固定スタイル。背景がどんな色・動きでも読める */
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 2px 16px rgba(0, 0, 0, 0.6),
+    0 0 2px rgba(0, 0, 0, 0.9);
   padding: 0 4cqw;
+  pointer-events: none;
 }
 .stage__img {
   position: absolute;
@@ -334,6 +338,39 @@ button {
 .cell__empty {
   font-size: 13px;
 }
+/* ボタン番号（1〜12）。場所に固定で、入れ替えても動かない */
+.cell__num {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.cell--empty .cell__num {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line);
+  color: var(--muted);
+}
+/* ドラッグ＆ドロップ（編集モードでの入れ替え） */
+.cell--dragging {
+  opacity: 0.4;
+}
+.cell--dropTarget {
+  outline: 3px dashed var(--edit);
+  outline-offset: 2px;
+}
 
 /* サイドパネル */
 .live__side,
@@ -500,6 +537,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.editor__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--edit);
 }
 .editor__row {
   display: flex;

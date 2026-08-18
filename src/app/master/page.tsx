@@ -23,6 +23,7 @@ import {
   FONT_LABELS,
   SIZE_LABELS,
   makeDefaultScene,
+  migrateProgram,
   usesBpm,
   usesColor2,
   usesText,
@@ -72,7 +73,9 @@ export default function MasterPage() {
     if (!ok) return;
     try {
       const raw = localStorage.getItem(PROGRAM_KEY);
-      setProgram(raw ? (JSON.parse(raw) as ShowProgram) : defaultProgram());
+      setProgram(
+        raw ? migrateProgram(JSON.parse(raw) as ShowProgram) : defaultProgram()
+      );
     } catch {
       setProgram(defaultProgram());
     }
@@ -390,6 +393,7 @@ function LivePanel({
             disabled={!scene}
             onClick={() => scene && onPress(scene, i)}
           >
+            <span className="cell__num">{i + 1}</span>
             {scene ? (
               <>
                 <span className="cell__label">{scene.label}</span>
@@ -508,6 +512,8 @@ function EditPanel({
   onProgramChange: (p: ShowProgram) => void;
 }) {
   const song = program.songs[songIdx];
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
 
   const setButton = (i: number, scene: Scene | null) => {
     const songs = program.songs.slice();
@@ -515,6 +521,19 @@ function EditPanel({
     buttons[i] = scene;
     songs[songIdx] = { ...songs[songIdx], buttons };
     onProgramChange({ ...program, songs });
+  };
+
+  // シーンの中身だけを入れ替える。番号は場所に固定（動かない）
+  const swapButtons = (a: number, b: number) => {
+    if (a === b) return;
+    const songs = program.songs.slice();
+    const buttons = songs[songIdx].buttons.slice();
+    [buttons[a], buttons[b]] = [buttons[b], buttons[a]];
+    songs[songIdx] = { ...songs[songIdx], buttons };
+    onProgramChange({ ...program, songs });
+    // 選択中のシーンは移動先へ追従させる
+    if (editIdx === a) setEditIdx(b);
+    else if (editIdx === b) setEditIdx(a);
   };
 
   const editing = editIdx != null ? song.buttons[editIdx] : null;
@@ -527,13 +546,44 @@ function EditPanel({
             key={i}
             className={`cell cell--edit ${editIdx === i ? "cell--sel" : ""} ${
               scene ? "" : "cell--empty"
+            } ${dragIdx === i ? "cell--dragging" : ""} ${
+              overIdx === i && dragIdx != null && dragIdx !== i
+                ? "cell--dropTarget"
+                : ""
             }`}
             style={scene ? cellStyle(scene) : undefined}
+            draggable={!!scene}
+            onDragStart={(e) => {
+              setDragIdx(i);
+              e.dataTransfer.effectAllowed = "move";
+              // Firefox はデータが無いとドラッグ開始されない
+              e.dataTransfer.setData("text/plain", String(i));
+            }}
+            onDragOver={(e) => {
+              if (dragIdx == null) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setOverIdx(i);
+            }}
+            onDragLeave={() => {
+              setOverIdx((cur) => (cur === i ? null : cur));
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragIdx != null) swapButtons(dragIdx, i);
+              setDragIdx(null);
+              setOverIdx(null);
+            }}
+            onDragEnd={() => {
+              setDragIdx(null);
+              setOverIdx(null);
+            }}
             onClick={() => {
               if (!scene) setButton(i, makeDefaultScene(`シーン${i + 1}`));
               setEditIdx(i);
             }}
           >
+            <span className="cell__num">{i + 1}</span>
             {scene ? (
               <>
                 <span className="cell__label">{scene.label}</span>
@@ -549,6 +599,7 @@ function EditPanel({
       <div className="edit__side">
         {editIdx != null && editing ? (
           <SceneEditor
+            index={editIdx}
             scene={editing}
             onChange={(s) => setButton(editIdx, s)}
             onClear={() => {
@@ -561,6 +612,9 @@ function EditPanel({
             ボタンをタップしてシーンを割り当て・編集します。
             <br />
             空きボタンをタップすると新規作成、既存はその場で編集できます。
+            <br />
+            ボタンを<b>ドラッグ＆ドロップ</b>すると同じ曲内でシーンを
+            入れ替えられます（番号は場所に固定のまま）。
           </div>
         )}
         <ProgramTools program={program} onProgramChange={onProgramChange} />
@@ -571,10 +625,12 @@ function EditPanel({
 
 // ---------------------------------------------------------------------------
 function SceneEditor({
+  index,
   scene,
   onChange,
   onClear,
 }: {
+  index: number;
   scene: Scene;
   onChange: (s: Scene) => void;
   onClear: () => void;
@@ -582,6 +638,7 @@ function SceneEditor({
   const up = (patch: Partial<Scene>) => onChange({ ...scene, ...patch });
   return (
     <div className="editor">
+      <div className="editor__title">ボタン {index + 1} を編集中</div>
       <div className="editor__row">
         <label>ボタン名</label>
         <input
@@ -660,14 +717,14 @@ function SceneEditor({
       {usesText(scene.pattern) ? (
         <>
           <div className="editor__row editor__row--top">
-            <label>表示文字</label>
+            <label>重ね文字</label>
             <textarea
               className="editor__textarea"
               value={scene.text ?? ""}
               onChange={(e) => up({ text: e.target.value })}
               rows={3}
               maxLength={60}
-              placeholder="改行できます"
+              placeholder="空欄＝文字なし。改行できます"
             />
           </div>
           <div className="editor__row">
@@ -828,7 +885,7 @@ function ProgramTools({
       try {
         const p = JSON.parse(String(reader.result)) as ShowProgram;
         if (!p.songs) throw new Error("invalid");
-        onProgramChange(p);
+        onProgramChange(migrateProgram(p));
         alert("読み込みました");
       } catch {
         alert("JSONの読み込みに失敗しました");
@@ -896,10 +953,12 @@ function JoinPanel() {
 // ---------------------------------------------------------------------------
 // 表示ヘルパー
 function metaLabel(scene: Scene): string {
-  const base = PATTERN_LABELS[scene.pattern];
+  let base = PATTERN_LABELS[scene.pattern];
   if (usesBpm(scene.pattern)) {
-    return `${base} ${scene.bpm ?? 120}${scene.repeat === false ? " 1回" : ""}`;
+    base += ` ${scene.bpm ?? 120}${scene.repeat === false ? " 1回" : ""}`;
   }
+  // オーバーレイ文字つきのシーンはひと目でわかるように印をつける
+  if (usesText(scene.pattern) && scene.text) base += "・文字";
   return base;
 }
 
@@ -929,9 +988,6 @@ function cellStyle(scene: Scene): React.CSSProperties {
           )})`,
         }
       : { background: "#111", borderColor: "#333" };
-  }
-  if (scene.pattern === "text") {
-    return { background: "#111", borderColor: "#333" };
   }
   return { background: scene.color };
 }

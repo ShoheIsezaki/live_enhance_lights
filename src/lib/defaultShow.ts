@@ -37,7 +37,7 @@ export function defaultProgram(): ShowProgram {
       song("s3", "M3 ラスト", [
         { label: "赤ストロボ", pattern: "strobe", color: "#ff3b30", bpm: 160, repeat: true },
         { label: "金 明滅", pattern: "pulse", color: "#ffd60a", bpm: 140, repeat: true },
-        { label: "コール『せーの！』", pattern: "text", color: "#ffffff", text: "せーの！" },
+        { label: "コール『せーの！』", pattern: "solid", color: "#000000", text: "せーの！" },
         { label: "レインボー", pattern: "rainbow", color: "#ffffff" },
         { label: "総立ち 全白", pattern: "solid", color: "#ffffff" },
         { label: "暗転", pattern: "blackout", color: "#000000" },
